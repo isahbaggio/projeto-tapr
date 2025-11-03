@@ -1,0 +1,9 @@
+CREATE TABLE clientes (
+    id UUID PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    telefone VARCHAR(20) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    cpf VARCHAR(14) NOT NULL UNIQUE,
+    endereco VARCHAR(500),
+    ativo BOOLEAN NOT NULL DEFAULT true
+);

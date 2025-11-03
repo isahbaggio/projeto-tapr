@@ -1,0 +1,13 @@
+package com.br.oficina.domain.produto;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface ProdutoRepository {
+    Produto save(Produto produto);
+    Optional<Produto> findById(UUID id);
+    List<Produto> findAll();
+    void deleteById(UUID id);
+    boolean existsById(UUID id);
+}
