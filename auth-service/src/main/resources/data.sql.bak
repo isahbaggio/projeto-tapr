@@ -1,0 +1,11 @@
+INSERT INTO users (id, name, email, password, created_at) VALUES
+('550e8400-e29b-41d4-a716-446655440001', 'Admin User', 'admin@oficina.com', '$2a$10$N8jJZvqFXl1xXKJK1BNjg.ZI5.5uG1K1BLxKvOuTKaL8zJ8dRqN0W', NOW()),
+('550e8400-e29b-41d4-a716-446655440002', 'Manager User', 'manager@oficina.com', '$2a$10$N8jJZvqFXl1xXKJK1BNjg.ZI5.5uG1K1BLxKvOuTKaL8zJ8dRqN0W', NOW()),
+('550e8400-e29b-41d4-a716-446655440003', 'Waiter User', 'waiter@oficina.com', '$2a$10$N8jJZvqFXl1xXKJK1BNjg.ZI5.5uG1K1BLxKvOuTKaL8zJ8dRqN0W', NOW()),
+('550e8400-e29b-41d4-a716-446655440004', 'Customer User', 'customer@oficina.com', '$2a$10$N8jJZvqFXl1xXKJK1BNjg.ZI5.5uG1K1BLxKvOuTKaL8zJ8dRqN0W', NOW());
+
+INSERT INTO roles (user_id, type) VALUES
+('550e8400-e29b-41d4-a716-446655440001', 'ADMIN'),
+('550e8400-e29b-41d4-a716-446655440002', 'MANAGER'),
+('550e8400-e29b-41d4-a716-446655440003', 'WAITER'),
+('550e8400-e29b-41d4-a716-446655440004', 'CUSTOMER');
