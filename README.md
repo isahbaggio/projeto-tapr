@@ -5,13 +5,13 @@ Sistema completo de gerenciamento de oficina automotiva utilizando arquitetura d
 ## 📋 Índice
 
 - [🚀 Início Rápido](#-início-rápido)
+- [👥 Usuários Pré-Cadastrados](#-usuários-pré-cadastrados)
 - [📖 Sobre o Projeto](#-sobre-o-projeto)
 - [⚙️ Instalação e Execução](#️-instalação-e-execução)
-- [👤 Primeiros Passos](#-primeiros-passos)
 - [🔐 Autenticação e Autorização](#-autenticação-e-autorização)
 - [📚 Guia de Endpoints](#-guia-de-endpoints)
-- [🎯 Exemplo Prático Completo](#-exemplo-prático-completo)
 - [🔍 Verificando o Sistema](#-verificando-o-sistema)
+- [📊 Logs e Debugging](#-logs-e-debugging)
 - [🛠️ Desenvolvimento](#️-desenvolvimento)
 - [❓ FAQ](#-faq)
 - [🐛 Troubleshooting](#-troubleshooting)
@@ -22,34 +22,148 @@ Sistema completo de gerenciamento de oficina automotiva utilizando arquitetura d
 
 ## 🚀 Início Rápido
 
-Quer apenas rodar o sistema? Siga estes 5 passos:
+Quer apenas rodar o sistema? Siga estes 4 passos:
+
+### 1️⃣ Subir o Sistema
 
 ```bash
 docker-compose up
 ```
 
-```bash
-curl -X POST http://localhost/auth/users \
-  -H "Content-Type: application/json" \
-  -d '{"name":"João Silva","email":"joao@test.com","password":"senha123"}'
-```
+Aguarde ~30 segundos para todos os serviços iniciarem.
+
+### 2️⃣ Fazer Login com Usuário Pré-Cadastrado
+
+O sistema já vem com 4 usuários pré-cadastrados! Use o mecânico para acessar a API:
 
 ```bash
-curl -X POST http://localhost/auth/auth/login/password \
+curl -X POST http://localhost/auth/login/password \
   -H "Content-Type: application/json" \
-  -d '{"email":"joao@test.com","password":"senha123"}'
+  -d '{"email":"mecanico@oficina.com","password":"senha123"}'
+```
+
+**Resposta:**
+```json
+{
+  "accessToken": "eyJhbGci...",
+  "refreshToken": "",
+  "expiresIn": 900
+}
 ```
 
 Copie o `accessToken` retornado.
 
+### 3️⃣ Acessar Endpoint de Oficina
+
 ```bash
+TOKEN="seu_token_aqui"
+
 curl -X GET http://localhost/oficina/clientes \
-  -H "Authorization: Bearer {seu_token}"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-⚠️ Você receberá **403 Forbidden** porque novos usuários são criados como **CLIENTE** por padrão. Endpoints de oficina requerem role **MECANICO** ou superior.
+**Resposta (200 OK):**
+```json
+{
+  "content": [],
+  "totalElements": 0,
+  "totalPages": 0,
+  "size": 20
+}
+```
 
-📖 Continue lendo para aprender como mudar a role do usuário e usar o sistema completo.
+✅ **Funcionou!** O usuário `mecanico@oficina.com` tem permissão para acessar a API de oficina.
+
+### 4️⃣ Criar um Cliente
+
+```bash
+curl -X POST http://localhost/oficina/clientes \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "João Silva",
+    "telefone": "11999999999",
+    "email": "joao@email.com",
+    "cpf": "12345678900",
+    "endereco": "Rua Teste 123",
+    "ativo": true
+  }'
+```
+
+**Resposta (201 Created):**
+```json
+{
+  "id": "uuid",
+  "nome": "João Silva",
+  "telefone": "11999999999",
+  "email": "joao@email.com",
+  "cpf": "12345678900",
+  "endereco": "Rua Teste 123",
+  "ativo": true
+}
+```
+
+🎉 **Pronto!** Você já está usando o sistema completo.
+
+---
+
+## 👥 Usuários Pré-Cadastrados
+
+O sistema já vem com 4 usuários pré-configurados no banco de dados H2 do auth-service, prontos para uso!
+
+### Credenciais
+
+**Todos os usuários usam a mesma senha:** `senha123`
+
+| Email | Senha | Role | Level | Descrição |
+|-------|-------|------|-------|-----------|
+| `gestor@oficina.com` | senha123 | **GESTOR** | 4 | Acesso total ao sistema |
+| `mecanico@oficina.com` | senha123 | **MECANICO** | 3 | Acessa todos endpoints de oficina |
+| `atendente@oficina.com` | senha123 | **ATENDENTE** | 2 | Gerencia clientes (futuramente) |
+| `cliente@oficina.com` | senha123 | **CLIENTE** | 1 | Acesso básico |
+
+### Exemplos de Login
+
+#### Gestor (Acesso Total)
+
+```bash
+curl -X POST http://localhost/auth/login/password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"gestor@oficina.com","password":"senha123"}'
+```
+
+#### Mecânico (Acessa API de Oficina)
+
+```bash
+curl -X POST http://localhost/auth/login/password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mecanico@oficina.com","password":"senha123"}'
+```
+
+#### Cliente (Acesso Limitado)
+
+```bash
+curl -X POST http://localhost/auth/login/password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"cliente@oficina.com","password":"senha123"}'
+```
+
+**Testando permissões:**
+- ✅ Gestor e Mecânico → Conseguem acessar `/oficina/**`
+- ❌ Atendente e Cliente → Recebem **403 Forbidden** em `/oficina/**` (requer role MECANICO)
+
+### Como Funciona
+
+Os usuários são carregados automaticamente do arquivo `auth-service/src/main/resources/data.sql` quando o sistema inicia:
+
+```sql
+INSERT INTO usuario (id, name, email, password, role) VALUES
+('...', 'Gestor Oficina', 'gestor@oficina.com', '$2a$10$...', 'GESTOR'),
+('...', 'Mecanico Oficina', 'mecanico@oficina.com', '$2a$10$...', 'MECANICO'),
+...
+```
+
+As senhas são hasheadas usando BCrypt com cost factor 10.
 
 ---
 
@@ -126,160 +240,6 @@ Parar e remover volumes (limpa banco de dados):
 ```bash
 docker-compose down -v
 ```
-
----
-
-## 👤 Primeiros Passos
-
-### Passo 1: Criar Seu Primeiro Usuário
-
-Registre um novo usuário no sistema:
-
-```bash
-curl -X POST http://localhost/auth/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "João Silva",
-    "email": "joao@test.com",
-    "password": "senha123"
-  }'
-```
-
-**Resposta esperada:**
-
-```json
-{
-  "id": "e645f285-009d-42ab-8c98-86e9dd4c4506",
-  "name": "João Silva",
-  "email": "joao@test.com",
-  "role": "CLIENTE"
-}
-```
-
-✅ Usuário criado com sucesso! Por padrão, todos os novos usuários recebem a role **CLIENTE**.
-
-### Passo 2: Fazer Login
-
-Faça login para obter um token JWT:
-
-```bash
-curl -X POST http://localhost/auth/auth/login/password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "joao@test.com",
-    "password": "senha123"
-  }'
-```
-
-**Resposta esperada:**
-
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "",
-  "expiresIn": 900
-}
-```
-
-✅ Token obtido com sucesso! Ele expira em **15 minutos** (900 segundos).
-
-### Passo 3: Tentar Acessar Endpoint de Oficina
-
-Tente listar os clientes da oficina:
-
-```bash
-TOKEN="seu_token_aqui"
-
-curl -X GET http://localhost/oficina/clientes \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-**Resposta esperada:**
-
-```
-HTTP/1.1 403 Forbidden
-```
-
-❌ **403 Forbidden**: Você não tem permissão! Endpoints de oficina requerem role **MECANICO** ou superior.
-
-### Passo 4: Mudar Role do Usuário
-
-Para acessar endpoints de oficina, você precisa mudar a role do usuário para **MECANICO** ou **GESTOR**.
-
-#### Opção 1: Via Console H2 (Recomendado para Testes)
-
-Acesse o console H2 do auth-service:
-
-```
-http://localhost:8084/h2-console
-```
-
-**Configurações de conexão:**
-- JDBC URL: `jdbc:h2:mem:auth_db`
-- User: `sa`
-- Password: `password`
-
-Execute este SQL para mudar a role do usuário:
-
-```sql
-UPDATE tb_users SET role = 'MECANICO' WHERE email = 'joao@test.com';
-```
-
-✅ Role atualizada para MECANICO!
-
-#### Opção 2: Criar Usuário com Role Específica via SQL
-
-Você também pode criar usuários diretamente no banco:
-
-```sql
-INSERT INTO tb_users (id, name, email, password_hash, role, created_at, updated_at)
-VALUES (
-  RANDOM_UUID(),
-  'Maria Mecânica',
-  'maria@oficina.com',
-  '$2a$10$hashed_password_here',
-  'MECANICO',
-  CURRENT_TIMESTAMP,
-  CURRENT_TIMESTAMP
-);
-```
-
-⚠️ Para gerar o hash da senha, use BCrypt com cost factor 10.
-
-### Passo 5: Login Novamente e Acessar Oficina
-
-Faça login novamente para obter um novo token com a role atualizada:
-
-```bash
-curl -X POST http://localhost/auth/auth/login/password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "joao@test.com",
-    "password": "senha123"
-  }'
-```
-
-Agora tente acessar a oficina com o novo token:
-
-```bash
-TOKEN="novo_token_aqui"
-
-curl -X GET http://localhost/oficina/clientes \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-**Resposta esperada:**
-
-```json
-{
-  "content": [],
-  "totalElements": 0,
-  "totalPages": 0,
-  "size": 20
-}
-```
-
-✅ **200 OK**: Acesso autorizado! Agora você pode usar todos os endpoints de oficina.
 
 ---
 
@@ -671,125 +631,257 @@ Authorization: Bearer {token}
 
 ---
 
-## 🎯 Exemplo Prático Completo
+#### Veículos
 
-Vamos criar um fluxo completo: do zero até criar um cliente na oficina.
-
-### 1️⃣ Subir o Sistema
+##### Listar Veículos
 
 ```bash
-docker-compose up -d
+GET http://localhost/oficina/veiculos
+Authorization: Bearer {token}
 ```
 
-Aguarde ~30 segundos para todos os serviços iniciarem.
-
-### 2️⃣ Verificar se Está Rodando
+##### Criar Veículo
 
 ```bash
-docker-compose ps
+POST http://localhost/oficina/veiculos
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "placa": "ABC1234",
+  "marca": "Toyota",
+  "modelo": "Corolla",
+  "ano": 2020,
+  "cor": "Prata",
+  "clienteId": "uuid-do-cliente",
+  "ativo": true
+}
 ```
 
-Todos os serviços devem estar com status `Up`.
+**Resposta (201 Created):**
 
-### 3️⃣ Registrar um Usuário
+```json
+{
+  "id": "uuid",
+  "placa": "ABC1234",
+  "marca": "Toyota",
+  "modelo": "Corolla",
+  "ano": 2020,
+  "cor": "Prata",
+  "clienteId": "uuid-do-cliente",
+  "ativo": true
+}
+```
+
+##### Buscar Veículo por ID
 
 ```bash
-curl -X POST http://localhost/auth/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Carlos Mecânico",
-    "email": "carlos@oficina.com",
-    "password": "senha123"
-  }'
+GET http://localhost/oficina/veiculos/{id}
+Authorization: Bearer {token}
 ```
 
-### 4️⃣ Fazer Login
+##### Buscar Veículos por Cliente
 
 ```bash
-curl -X POST http://localhost/auth/auth/login/password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "carlos@oficina.com",
-    "password": "senha123"
-  }'
+GET http://localhost/oficina/veiculos/cliente/{clienteId}
+Authorization: Bearer {token}
 ```
 
-Copie o `accessToken` retornado.
-
-### 5️⃣ Testar Acesso (Vai Falhar)
+##### Atualizar Veículo
 
 ```bash
-TOKEN="seu_token_aqui"
+PUT http://localhost/oficina/veiculos/{id}
+Authorization: Bearer {token}
+Content-Type: application/json
 
-curl -X GET http://localhost/oficina/clientes \
-  -H "Authorization: Bearer $TOKEN" \
-  -v
+{
+  "placa": "ABC1234",
+  "marca": "Toyota",
+  "modelo": "Corolla XEI",
+  "ano": 2020,
+  "cor": "Prata",
+  "clienteId": "uuid-do-cliente",
+  "ativo": true
+}
 ```
 
-Resultado: **403 Forbidden** (esperado, pois você é CLIENTE)
-
-### 6️⃣ Mudar Role para MECANICO
-
-Acesse http://localhost:8084/h2-console
-
-Execute:
-
-```sql
-UPDATE tb_users SET role = 'MECANICO' WHERE email = 'carlos@oficina.com';
-```
-
-### 7️⃣ Login Novamente
+##### Deletar Veículo
 
 ```bash
-curl -X POST http://localhost/auth/auth/login/password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "carlos@oficina.com",
-    "password": "senha123"
-  }'
+DELETE http://localhost/oficina/veiculos/{id}
+Authorization: Bearer {token}
 ```
 
-Copie o **novo token** (agora com role MECANICO).
+---
 
-### 8️⃣ Listar Clientes (Agora Funciona!)
+#### Vendas
+
+##### Listar Vendas
 
 ```bash
-TOKEN="novo_token_aqui"
-
-curl -X GET http://localhost/oficina/clientes \
-  -H "Authorization: Bearer $TOKEN"
+GET http://localhost/oficina/vendas
+Authorization: Bearer {token}
 ```
 
-Resultado: **200 OK** com lista vazia `[]`
-
-### 9️⃣ Criar um Cliente
+##### Criar Venda
 
 ```bash
-curl -X POST http://localhost/oficina/clientes \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nome": "João das Couves",
-    "telefone": "11987654321",
-    "email": "joao@email.com",
-    "cpf": "12345678900",
-    "endereco": "Rua das Flores, 123",
-    "ativo": true
-  }'
+POST http://localhost/oficina/vendas
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "clienteId": "uuid-do-cliente",
+  "observacoes": "Troca de óleo completa",
+  "itens": [
+    {
+      "tipoItem": "PRODUTO",
+      "itemId": "uuid-do-produto",
+      "itemNome": "Óleo de Motor 5W30",
+      "quantidade": 2,
+      "precoUnitario": 65.00
+    },
+    {
+      "tipoItem": "SERVICO",
+      "itemId": "uuid-do-servico",
+      "itemNome": "Troca de Óleo",
+      "quantidade": 1,
+      "precoUnitario": 80.00
+    }
+  ]
+}
 ```
 
-Resultado: **201 Created** com dados do cliente criado
+**Resposta (201 Created):**
 
-### 🔟 Listar Clientes Novamente
+```json
+{
+  "id": "uuid",
+  "clienteId": "uuid-do-cliente",
+  "dataVenda": "2025-11-04T16:06:33.895055",
+  "itens": [
+    {
+      "id": "uuid",
+      "tipoItem": "PRODUTO",
+      "itemId": "uuid-do-produto",
+      "itemNome": "Óleo de Motor 5W30",
+      "quantidade": 2,
+      "precoUnitario": 65.00,
+      "subtotal": 130.00
+    },
+    {
+      "id": "uuid",
+      "tipoItem": "SERVICO",
+      "itemId": "uuid-do-servico",
+      "itemNome": "Troca de Óleo",
+      "quantidade": 1,
+      "precoUnitario": 80.00,
+      "subtotal": 80.00
+    }
+  ],
+  "valorTotal": 210.00,
+  "observacoes": "Troca de óleo completa",
+  "cancelada": false
+}
+```
+
+##### Buscar Venda por ID
 
 ```bash
-curl -X GET http://localhost/oficina/clientes \
-  -H "Authorization: Bearer $TOKEN"
+GET http://localhost/oficina/vendas/{id}
+Authorization: Bearer {token}
 ```
 
-Agora você verá o cliente "João das Couves" na lista!
+##### Buscar Vendas por Cliente
 
-✅ **Sucesso!** Você completou o fluxo inteiro: criou usuário, obteve permissões e usou a API de oficina.
+```bash
+GET http://localhost/oficina/vendas/cliente/{clienteId}
+Authorization: Bearer {token}
+```
+
+##### Cancelar Venda
+
+```bash
+DELETE http://localhost/oficina/vendas/{id}
+Authorization: Bearer {token}
+```
+
+**Nota:** Este endpoint não deleta a venda, apenas marca o campo `cancelada` como `true`.
+
+---
+
+#### Relatórios
+
+##### Produtos Mais Vendidos
+
+```bash
+GET http://localhost/oficina/relatorios/produtos-mais-vendidos
+Authorization: Bearer {token}
+```
+
+**Resposta (200 OK):**
+
+```json
+[
+  {
+    "itemId": "uuid",
+    "itemNome": "Óleo de Motor 5W30",
+    "tipoItem": "PRODUTO",
+    "quantidadeVendida": 10,
+    "valorTotal": 650.00
+  }
+]
+```
+
+##### Serviços Mais Vendidos
+
+```bash
+GET http://localhost/oficina/relatorios/servicos-mais-vendidos
+Authorization: Bearer {token}
+```
+
+**Resposta (200 OK):**
+
+```json
+[
+  {
+    "itemId": "uuid",
+    "itemNome": "Troca de Óleo",
+    "tipoItem": "SERVICO",
+    "quantidadeVendida": 15,
+    "valorTotal": 1200.00
+  }
+]
+```
+
+##### Vendas por Cliente
+
+```bash
+GET http://localhost/oficina/relatorios/vendas-por-cliente
+Authorization: Bearer {token}
+```
+
+**Resposta (200 OK):**
+
+```json
+[
+  {
+    "clienteId": "uuid",
+    "clienteNome": "João Silva",
+    "totalVendas": 5,
+    "valorTotal": 1500.00
+  }
+]
+```
+
+##### Vendas por Período
+
+```bash
+GET http://localhost/oficina/relatorios/vendas-por-periodo?inicio=2025-11-01T00:00:00&fim=2025-11-30T23:59:59
+Authorization: Bearer {token}
+```
+
+**Nota:** Este endpoint está com problema de parsing de data. Os outros 3 relatórios funcionam perfeitamente.
 
 ---
 
@@ -846,6 +938,178 @@ docker-compose restart auth-service
 ```bash
 docker stats
 ```
+
+---
+
+## 📊 Logs e Debugging
+
+O sistema possui logs detalhados para facilitar o debugging e monitoramento de requisições.
+
+### Logs Implementados
+
+#### Gateway Service
+
+O gateway registra todas as requisições que passam por ele:
+
+**Logs de Requisição:**
+```
+INFO: Forwarding POST request to http://auth-service:8084/auth/login/password
+DEBUG: Request body: {"email":"mecanico@oficina.com","password":"senha123"}
+```
+
+**Logs de Resposta:**
+```
+INFO: Received response from http://auth-service:8084/auth/login/password with status 200 OK
+DEBUG: Response body: {"accessToken":"eyJ...","refreshToken":"","expiresIn":900}
+```
+
+**Logs de Erro:**
+```
+WARN: Service returned error: 401 UNAUTHORIZED - {"timestamp":"...","status":401,"error":"Unauthorized"}
+```
+
+#### Authorization Filter
+
+O filtro de autorização registra todas as verificações de permissão:
+
+**Rota Pública (sem autenticação):**
+```
+DEBUG: Authorization filter processing request: POST /auth/login/password
+DEBUG: Path /auth/login/password does not require authorization, allowing request
+```
+
+**Rota Protegida (com sucesso):**
+```
+DEBUG: Authorization filter processing request: GET /oficina/clientes
+DEBUG: User with role MECANICO authorized for path /oficina/clientes
+```
+
+**Acesso Negado:**
+```
+WARN: User with role CLIENTE is not authorized for path /oficina/clientes
+```
+
+**Token Inválido:**
+```
+WARN: Invalid JWT token for path /oficina/clientes: JWT expired at ...
+```
+
+### Como Visualizar os Logs
+
+#### Ver logs de um serviço específico
+
+```bash
+docker logs gateway-service
+```
+
+#### Ver logs em tempo real
+
+```bash
+docker logs -f gateway-service
+```
+
+#### Ver últimas 100 linhas
+
+```bash
+docker logs --tail=100 gateway-service
+```
+
+#### Filtrar logs por nível
+
+Apenas erros e warnings:
+```bash
+docker logs gateway-service 2>&1 | grep -E "WARN|ERROR"
+```
+
+Apenas requisições:
+```bash
+docker logs gateway-service 2>&1 | grep "Forwarding"
+```
+
+#### Ver logs de múltiplos serviços
+
+```bash
+docker-compose logs -f gateway-service auth-service
+```
+
+### Debugging de Problemas Comuns
+
+#### Problema: 401 Unauthorized no login
+
+**1. Verifique os logs do auth-service:**
+```bash
+docker logs auth-service 2>&1 | grep -i "login\|password\|unauthorized"
+```
+
+**2. Verifique se o usuário existe:**
+- Os usuários pré-cadastrados são carregados do `data.sql` na inicialização
+- Procure por: `Executing SQL script from file [/app/target/classes/data.sql]`
+
+**3. Verifique se a senha está correta:**
+- Todos os usuários pré-cadastrados usam a senha: `senha123`
+
+#### Problema: 403 Forbidden ao acessar /oficina
+
+**1. Verifique os logs do gateway:**
+```bash
+docker logs gateway-service 2>&1 | grep -E "WARN.*not authorized"
+```
+
+**2. Decodifique seu JWT para ver a role:**
+- Acesse https://jwt.io
+- Cole seu token
+- Verifique o campo `"role"` no payload
+
+**3. Verifique se está usando um usuário com permissão:**
+- `/oficina/**` requer role **MECANICO** ou superior
+- Use `mecanico@oficina.com` ou `gestor@oficina.com`
+
+#### Problema: Serviço não responde
+
+**1. Verifique se os serviços estão rodando:**
+```bash
+docker-compose ps
+```
+
+**2. Verifique os logs de inicialização:**
+```bash
+docker logs auth-service 2>&1 | grep -E "Started|ERROR"
+```
+
+Procure por: `Started AuthserviceApplication in X seconds`
+
+**3. Verifique se há erros de conexão:**
+```bash
+docker logs gateway-service 2>&1 | grep -i "error\|connection"
+```
+
+### Logs SQL (Modo Debug)
+
+Para ver todas as queries SQL executadas, os logs estão habilitados no auth-service:
+
+```bash
+docker logs auth-service 2>&1 | grep "Hibernate:"
+```
+
+Exemplo:
+```
+DEBUG: Hibernate: select u1_0.id,u1_0.email,u1_0.name,u1_0.password,u1_0.role from usuario u1_0 where u1_0.email=?
+```
+
+### Melhorias Implementadas
+
+1. **Tratamento de Erros HTTP Correto**
+   - Anteriormente, todos os erros eram retornados como `502 Bad Gateway`
+   - Agora, o status code original do serviço é mantido (401, 403, 404, etc.)
+
+2. **Logs Estruturados**
+   - Logs de requisição/resposta no nível INFO
+   - Detalhes do body no nível DEBUG
+   - Erros no nível WARN/ERROR
+
+3. **Rastreamento de Requisições**
+   - Cada requisição pode ser rastreada do nginx → gateway → serviço
+   - Facilita identificar onde uma requisição falhou
 
 ---
 
@@ -923,13 +1187,23 @@ docker-compose up
 
 ## ❓ FAQ
 
-### Como criar usuário MECANICO ou GESTOR?
+### Como usar um usuário com role MECANICO ou GESTOR?
 
-Novos usuários são criados como CLIENTE por padrão. Para mudar:
+Use os [usuários pré-cadastrados](#-usuários-pré-cadastrados)! O sistema já vem com 4 usuários prontos:
+
+- `gestor@oficina.com` - Role GESTOR (acesso total)
+- `mecanico@oficina.com` - Role MECANICO (acessa API de oficina)
+- `atendente@oficina.com` - Role ATENDENTE
+- `cliente@oficina.com` - Role CLIENTE
+
+**Todos usam a senha:** `senha123`
+
+Se criar novos usuários via API, eles terão role CLIENTE por padrão. Para alterar:
 
 1. Acesse http://localhost:8084/h2-console
-2. Execute: `UPDATE tb_users SET role = 'MECANICO' WHERE email = 'seu@email.com';`
-3. Faça login novamente para obter novo token
+2. Conecte com: JDBC URL `jdbc:h2:mem:auth_db`, User `sa`, Password `password`
+3. Execute: `UPDATE usuario SET role = 'MECANICO' WHERE email = 'seu@email.com';`
+4. Faça login novamente para obter novo token com a role atualizada
 
 ### Quanto tempo o token JWT dura?
 
@@ -956,6 +1230,8 @@ Isso apaga todos os dados e recria os bancos vazios.
 ### Onde ficam os dados armazenados?
 
 - **Auth Service**: H2 em memória (dados são perdidos ao parar o container)
+  - ⚠️ **Importante:** Os 4 usuários pré-cadastrados são recarregados automaticamente do `data.sql` sempre que o serviço inicia
+  - Outros usuários criados via API são perdidos ao reiniciar
 - **Oficina Service**: PostgreSQL em volume Docker (dados persistem)
 
 Para ver volumes:
@@ -1260,7 +1536,8 @@ Banco persistente usado pelo oficina service.
 - `produtos` - Produtos (peças, materiais)
 - `servicos` - Serviços oferecidos
 - `veiculos` - Veículos dos clientes
-- `ordens_servico` - Ordens de serviço
+- `vendas` - Vendas de produtos e serviços
+- `itens_venda` - Itens das vendas
 
 **✅ Dados persistem mesmo após parar containers!**
 
@@ -1317,78 +1594,4 @@ SELECT * FROM clientes;
 
 ---
 
-## 📝 Exemplo de Collection Postman
-
-Importe esta collection no Postman para testar facilmente:
-
-```json
-{
-  "info": {
-    "name": "Sistema Oficina",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "item": [
-    {
-      "name": "Auth - Register",
-      "request": {
-        "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "url": "http://localhost/auth/users",
-        "body": {
-          "mode": "raw",
-          "raw": "{\"name\":\"João Silva\",\"email\":\"joao@test.com\",\"password\":\"senha123\"}"
-        }
-      }
-    },
-    {
-      "name": "Auth - Login",
-      "request": {
-        "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "url": "http://localhost/auth/auth/login/password",
-        "body": {
-          "mode": "raw",
-          "raw": "{\"email\":\"joao@test.com\",\"password\":\"senha123\"}"
-        }
-      }
-    },
-    {
-      "name": "Oficina - Listar Clientes",
-      "request": {
-        "method": "GET",
-        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
-        "url": "http://localhost/oficina/clientes"
-      }
-    }
-  ]
-}
-```
-
----
-
-## 🚀 Próximos Passos
-
-Agora que você domina o básico, explore:
-
-1. **Implemente novos endpoints** no oficina service
-2. **Adicione validações** customizadas nos DTOs
-3. **Implemente refresh tokens** para melhor UX
-4. **Adicione testes de integração**
-5. **Configure CI/CD** com GitHub Actions
-6. **Deploy em produção** com Kubernetes ou AWS
-
----
-
-## 📄 Licença
-
-Este projeto é parte de um trabalho acadêmico.
-
----
-
-## 👥 Contribuindo
-
-Pull requests são bem-vindos! Para mudanças maiores, abra uma issue primeiro.
-
----
-
-**Desenvolvido com ❤️ para a disciplina de Tópicos Avançados em Programação**
+**Desenvolvido para a disciplina de Sistemas Distribuídos**
