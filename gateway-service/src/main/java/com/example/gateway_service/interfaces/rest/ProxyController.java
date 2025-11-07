@@ -27,7 +27,7 @@ public class ProxyController {
         HttpMethod method,
         HttpServletRequest request
     ) {
-        String path = request.getRequestURI().substring(5);
+        String path = request.getRequestURI();
         Map<String, String> headers = extractHeaders(request);
         return proxyAuthHandler.handle(path, method, body, headers);
     }

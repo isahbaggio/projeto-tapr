@@ -2,17 +2,33 @@ package com.example.gateway_service.infrastructure.http;
 
 import com.example.gateway_service.application.ports.HttpForwarder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
+import java.util.Set;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class RestTemplateHttpForwarder implements HttpForwarder {
 
     private final RestTemplate restTemplate;
+
+    private static final Set<String> HOP_BY_HOP_HEADERS = Set.of(
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
+        "content-length"
+    );
 
     @Override
     public ResponseEntity<String> forward(
@@ -21,14 +37,52 @@ public class RestTemplateHttpForwarder implements HttpForwarder {
         String body,
         Map<String, String> headers
     ) {
+        log.info("Forwarding {} request to {}", method, targetUrl);
+        log.debug("Request body: {}", body);
+
         HttpHeaders httpHeaders = new HttpHeaders();
-        headers.forEach(httpHeaders::add);
+        headers.forEach((key, value) -> {
+            if (!HOP_BY_HOP_HEADERS.contains(key.toLowerCase())) {
+                httpHeaders.add(key, value);
+            }
+        });
+
+        if (body != null && !body.isEmpty()) {
+            httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        }
 
         HttpEntity<String> entity = new HttpEntity<>(body, httpHeaders);
 
         try {
-            return restTemplate.exchange(targetUrl, method, entity, String.class);
+            ResponseEntity<String> response = restTemplate.exchange(
+                targetUrl,
+                method,
+                entity,
+                String.class
+            );
+
+            log.info("Received response from {} with status {}", targetUrl, response.getStatusCode());
+            log.debug("Response body: {}", response.getBody());
+
+            HttpHeaders responseHeaders = new HttpHeaders();
+            response.getHeaders().forEach((key, values) -> {
+                if (!HOP_BY_HOP_HEADERS.contains(key.toLowerCase())) {
+                    responseHeaders.addAll(key, values);
+                }
+            });
+
+            return ResponseEntity
+                .status(response.getStatusCode())
+                .headers(responseHeaders)
+                .body(response.getBody());
+
+        } catch (HttpStatusCodeException e) {
+            log.warn("Service returned error: {} {} - {}", e.getStatusCode(), e.getStatusText(), e.getResponseBodyAsString());
+            return ResponseEntity
+                .status(e.getStatusCode())
+                .body(e.getResponseBodyAsString());
         } catch (Exception e) {
+            log.error("Error forwarding request to {}: {}", targetUrl, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body("Service unavailable: " + e.getMessage());
         }

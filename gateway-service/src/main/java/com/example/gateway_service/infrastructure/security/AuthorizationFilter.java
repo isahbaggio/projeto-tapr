@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.auth0.jwt.JWT;
@@ -21,6 +23,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class AuthorizationFilter implements Filter {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthorizationFilter.class);
 
     private final String jwtSecret;
 
@@ -49,13 +53,17 @@ public class AuthorizationFilter implements Filter {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
         String path = httpRequest.getRequestURI();
 
+        log.debug("Authorization filter processing request: {} {}", httpRequest.getMethod(), path);
+
         if (routeRoles.entrySet().stream().noneMatch(entry -> path.startsWith(entry.getKey()))) {
+            log.debug("Path {} does not require authorization, allowing request", path);
             chain.doFilter(request, response);
             return;
         }
 
         String authHeader = httpRequest.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("Missing or invalid Authorization header for path {}", path);
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -67,12 +75,14 @@ public class AuthorizationFilter implements Filter {
             JWTVerifier verifier = JWT.require(algorithm).build();
             jwt = verifier.verify(token);
         } catch (Exception e) {
+            log.warn("Invalid JWT token for path {}: {}", path, e.getMessage());
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
         String tokenType = jwt.getClaim("type").asString();
         if (!tokenType.equals("access")) {
+            log.warn("Invalid token type '{}' for path {}", tokenType, path);
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -82,15 +92,18 @@ public class AuthorizationFilter implements Filter {
         try {
             role = RoleType.valueOf(userRoleType);
         } catch (Exception e) {
+            log.warn("Invalid role '{}' for path {}", userRoleType, path);
             httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
         if (!isAuthorized(path, role)) {
+            log.warn("User with role {} is not authorized for path {}", role, path);
             httpResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
+        log.debug("User with role {} authorized for path {}", role, path);
         chain.doFilter(request, response);
     }
 }
