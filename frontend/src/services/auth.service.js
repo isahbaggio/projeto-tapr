@@ -9,15 +9,6 @@ export const authService = {
     return response.data
   },
 
-  async register(name, email, password) {
-    const response = await api.post('/auth-service/auth/users', {
-      name,
-      email,
-      password
-    })
-    return response.data
-  },
-
   async requestMagicLink(email) {
     const response = await api.post('/auth-service/auth/login/magic', {
       email

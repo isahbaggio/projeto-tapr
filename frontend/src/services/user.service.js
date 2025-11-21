@@ -11,5 +11,20 @@ export const userService = {
   async getById(id) {
     const response = await api.get(`/auth-service/auth/users/${id}`)
     return response.data
+  },
+
+  async create(userData) {
+    const response = await api.post('/auth-service/auth/users', userData)
+    return response.data
+  },
+
+  async update(id, userData) {
+    const response = await api.put(`/auth-service/auth/users/${id}`, userData)
+    return response.data
+  },
+
+  async changeRole(id, role) {
+    const response = await api.patch(`/auth-service/auth/users/${id}/role`, { role })
+    return response.data
   }
 }

@@ -1,31 +1,34 @@
 package com.example.authservice.application.user;
 
-import com.example.authservice.application.ports.PasswordHasher;
 import com.example.authservice.domain.user.User;
 import com.example.authservice.domain.user.UserRepository;
 import com.example.authservice.domain.user.vo.Email;
-import com.example.authservice.domain.user.vo.RoleType;
 import com.example.authservice.interfaces.rest.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
-public class RegisterUserHandler {
+public class UpdateUserHandler {
     private final UserRepository userRepository;
-    private final PasswordHasher passwordHasher;
 
-    public UserResponse handle(String name, String email, String password, RoleType role) {
+    public UserResponse handle(String userId, String name, String email) {
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
         Email emailObj = Email.of(email);
-        if (userRepository.existsByEmail(email)) {
+
+        // Check if email is being changed and if it already exists
+        if (!user.getEmail().getValue().equals(email) && userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
         }
 
-        String hashedPassword = passwordHasher.hash(password);
-        RoleType userRole = role != null ? role : RoleType.ATENDENTE;
-        User user = new User(name, emailObj, userRole, hashedPassword);
+        user.setName(name);
+        user.setEmail(emailObj);
 
         User savedUser = userRepository.save(user);
 

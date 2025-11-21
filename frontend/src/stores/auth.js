@@ -51,22 +51,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(name, email, password) {
-    try {
-      loading.value = true
-      error.value = null
-
-      await authService.register(name, email, password)
-
-      return true
-    } catch (err) {
-      error.value = err.response?.data?.message || 'Erro ao registrar usuário'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
   function logout() {
     authService.logout()
     user.value = null
@@ -82,7 +66,6 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     loadFromStorage,
     login,
-    register,
     logout
   }
 })

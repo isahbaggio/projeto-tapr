@@ -1,11 +1,7 @@
 package com.example.authservice.interfaces.rest;
 
-import com.example.authservice.application.user.GetUserByIdHandler;
-import com.example.authservice.application.user.ListUserHandler;
-import com.example.authservice.application.user.RegisterUserHandler;
-import com.example.authservice.domain.user.User;
-import com.example.authservice.interfaces.rest.dto.RegisterUserRequest;
-import com.example.authservice.interfaces.rest.dto.UserResponse;
+import com.example.authservice.application.user.*;
+import com.example.authservice.interfaces.rest.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +19,8 @@ public class UserController {
     private final ListUserHandler listUserHandler;
     private final RegisterUserHandler registerUserHandler;
     private final GetUserByIdHandler getUserByIdHandler;
+    private final UpdateUserHandler updateUserHandler;
+    private final ChangeUserRoleHandler changeUserRoleHandler;
 
     @GetMapping
     public ResponseEntity<Page<UserResponse>> list(Pageable pageable) {
@@ -36,7 +34,8 @@ public class UserController {
         UserResponse created = registerUserHandler.handle(
                 request.name(),
                 request.email(),
-                request.password()
+                request.password(),
+                request.role()
         );
 
         return ResponseEntity
@@ -49,5 +48,27 @@ public class UserController {
         UserResponse user = getUserByIdHandler.handle(id);
 
         return ResponseEntity.ok(user);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserResponse> update(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateUserRequest request) {
+        UserResponse updated = updateUserHandler.handle(
+                id,
+                request.name(),
+                request.email()
+        );
+
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{id}/role")
+    public ResponseEntity<UserResponse> changeRole(
+            @PathVariable String id,
+            @Valid @RequestBody ChangeRoleRequest request) {
+        UserResponse updated = changeUserRoleHandler.handle(id, request.role());
+
+        return ResponseEntity.ok(updated);
     }
 }

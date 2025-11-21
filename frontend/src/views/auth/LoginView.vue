@@ -89,15 +89,6 @@ async function handleLogin() {
             Entrar
           </BaseButton>
         </form>
-
-        <div class="mt-6 text-center">
-          <p class="text-sm text-gray-600">
-            Não tem uma conta?
-            <RouterLink to="/register" class="text-primary-600 hover:text-primary-700 font-medium">
-              Registre-se
-            </RouterLink>
-          </p>
-        </div>
       </div>
     </div>
   </div>

@@ -19,6 +19,8 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests( auth -> auth
+                    // Security is enforced at gateway level
+                    // Gateway validates JWT and forwards to this service
                     .anyRequest().permitAll()
             )
             .httpBasic(AbstractHttpConfigurer::disable)
