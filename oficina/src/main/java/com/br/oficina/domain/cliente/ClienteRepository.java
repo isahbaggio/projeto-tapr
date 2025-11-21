@@ -12,4 +12,8 @@ public interface ClienteRepository {
     boolean existsById(UUID id);
     boolean existsByEmail(String email);
     boolean existsByCpf(String cpf);
+
+    // Métodos para relatórios
+    Long countAll();
+    Long countByAtivo(Boolean ativo);
 }

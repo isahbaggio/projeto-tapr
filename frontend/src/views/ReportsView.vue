@@ -5,6 +5,7 @@ import ProdutoReports from '@/components/reports/ProdutoReports.vue'
 import ServicoReports from '@/components/reports/ServicoReports.vue'
 import ClienteReports from '@/components/reports/ClienteReports.vue'
 import SystemOverview from '@/components/reports/SystemOverview.vue'
+import RankingsReports from '@/components/reports/RankingsReports.vue'
 import { exportToCSV } from '@/utils/exportUtils'
 
 const reportStore = useReportStore()
@@ -14,7 +15,8 @@ const tabs = [
   { id: 'overview', name: 'Visao Geral' },
   { id: 'produtos', name: 'Produtos' },
   { id: 'servicos', name: 'Servicos' },
-  { id: 'clientes', name: 'Clientes' }
+  { id: 'clientes', name: 'Clientes' },
+  { id: 'rankings', name: 'Rankings' }
 ]
 
 onMounted(() => {
@@ -122,6 +124,9 @@ function handleExport(type) {
       <ClienteReports
         v-if="activeTab === 'clientes' && reportStore.clienteReport"
         :report="reportStore.clienteReport"
+      />
+      <RankingsReports
+        v-if="activeTab === 'rankings'"
       />
     </div>
   </div>

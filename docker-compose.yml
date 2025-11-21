@@ -19,9 +19,6 @@ services:
     container_name: oficina
     ports:
      - "8085:8085"
-    volumes:
-     - ./oficina:/app
-     - ~/.m2:/root/.m2
     depends_on:
      - oficina-db
     networks:
@@ -33,9 +30,6 @@ services:
     container_name: auth-service
     ports:
      - "8084:8084"
-    volumes:
-     - ./auth-service:/app
-     - ~/.m2:/root/.m2
     networks:
      - app-network
 
@@ -45,9 +39,6 @@ services:
     container_name: gateway-service
     ports:
      - "8083:8080"
-    volumes:
-     - ./gateway-service:/app
-     - ~/.m2:/root/.m2
     depends_on:
      - auth-service
      - oficina

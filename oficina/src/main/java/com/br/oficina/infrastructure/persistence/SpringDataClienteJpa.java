@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface SpringDataClienteJpa extends JpaRepository<Cliente, UUID> {
     boolean existsByEmail(String email);
     boolean existsByCpf(String cpf);
+    Long countByAtivo(Boolean ativo);
 }

@@ -19,6 +19,10 @@ public class RelatorioController {
     private final RelatorioProdutosMaisVendidosHandler relatorioProdutosMaisVendidosHandler;
     private final RelatorioServicosMaisVendidosHandler relatorioServicosMaisVendidosHandler;
     private final RelatorioVendasPorClienteHandler relatorioVendasPorClienteHandler;
+    private final RelatorioEstatisticasProdutosHandler relatorioEstatisticasProdutosHandler;
+    private final RelatorioEstatisticasServicosHandler relatorioEstatisticasServicosHandler;
+    private final RelatorioEstatisticasClientesHandler relatorioEstatisticasClientesHandler;
+    private final RelatorioSistemaHandler relatorioSistemaHandler;
 
     @GetMapping("/vendas-por-periodo")
     public ResponseEntity<RelatorioVendasPorPeriodoResponse> vendasPorPeriodo(
@@ -43,6 +47,30 @@ public class RelatorioController {
     @GetMapping("/vendas-por-cliente")
     public ResponseEntity<List<RelatorioVendasPorClienteResponse>> vendasPorCliente() {
         List<RelatorioVendasPorClienteResponse> relatorio = relatorioVendasPorClienteHandler.handle();
+        return ResponseEntity.ok(relatorio);
+    }
+
+    @GetMapping("/produtos")
+    public ResponseEntity<RelatorioEstatisticasProdutosResponse> estatisticasProdutos() {
+        RelatorioEstatisticasProdutosResponse relatorio = relatorioEstatisticasProdutosHandler.handle();
+        return ResponseEntity.ok(relatorio);
+    }
+
+    @GetMapping("/servicos")
+    public ResponseEntity<RelatorioEstatisticasServicosResponse> estatisticasServicos() {
+        RelatorioEstatisticasServicosResponse relatorio = relatorioEstatisticasServicosHandler.handle();
+        return ResponseEntity.ok(relatorio);
+    }
+
+    @GetMapping("/clientes")
+    public ResponseEntity<RelatorioEstatisticasClientesResponse> estatisticasClientes() {
+        RelatorioEstatisticasClientesResponse relatorio = relatorioEstatisticasClientesHandler.handle();
+        return ResponseEntity.ok(relatorio);
+    }
+
+    @GetMapping("/sistema")
+    public ResponseEntity<RelatorioSistemaResponse> visaoGeralSistema() {
+        RelatorioSistemaResponse relatorio = relatorioSistemaHandler.handle();
         return ResponseEntity.ok(relatorio);
     }
 }

@@ -49,4 +49,14 @@ public class JpaClienteRepository implements ClienteRepository {
     public boolean existsByCpf(String cpf) {
         return jpaRepository.existsByCpf(cpf);
     }
+
+    @Override
+    public Long countAll() {
+        return jpaRepository.count();
+    }
+
+    @Override
+    public Long countByAtivo(Boolean ativo) {
+        return jpaRepository.countByAtivo(ativo);
+    }
 }
