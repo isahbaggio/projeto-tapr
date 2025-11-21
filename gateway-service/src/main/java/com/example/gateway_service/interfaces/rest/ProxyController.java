@@ -21,13 +21,13 @@ public class ProxyController {
     private final ProxyAuthHandler proxyAuthHandler;
     private final ProxyOficinaHandler proxyOficinaHandler;
 
-    @RequestMapping("/auth/**")
+    @RequestMapping("/auth-service/**")
     public ResponseEntity<String> proxyAuth(
         @RequestBody(required = false) String body,
         HttpMethod method,
         HttpServletRequest request
     ) {
-        String path = request.getRequestURI();
+        String path = request.getRequestURI().substring("/auth-service".length());
         Map<String, String> headers = extractHeaders(request);
         return proxyAuthHandler.handle(path, method, body, headers);
     }

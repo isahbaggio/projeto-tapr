@@ -1,6 +1,10 @@
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
-COPY ../../../../Users/luizs/AppData/Local/Temp/Rar$DRa32044.26340/oficina .
-RUN chmod +x mvnw
-EXPOSE 8080
-ENTRYPOINT ["./mvnw", "spring-boot:run"]
+COPY . .
+RUN chmod +x mvnw && ./mvnw clean package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8085
+ENTRYPOINT ["java", "-jar", "app.jar"]
