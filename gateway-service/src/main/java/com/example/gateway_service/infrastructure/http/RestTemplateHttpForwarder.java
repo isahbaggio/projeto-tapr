@@ -78,13 +78,26 @@ public class RestTemplateHttpForwarder implements HttpForwarder {
 
         } catch (HttpStatusCodeException e) {
             log.warn("Service returned error: {} {} - {}", e.getStatusCode(), e.getStatusText(), e.getResponseBodyAsString());
+
+            HttpHeaders errorHeaders = new HttpHeaders();
+            errorHeaders.setContentType(MediaType.APPLICATION_JSON);
+
             return ResponseEntity
                 .status(e.getStatusCode())
+                .headers(errorHeaders)
                 .body(e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("Error forwarding request to {}: {}", targetUrl, e.getMessage(), e);
+
+            HttpHeaders errorHeaders = new HttpHeaders();
+            errorHeaders.setContentType(MediaType.APPLICATION_JSON);
+
+            String errorBody = String.format("{\"message\":\"Service unavailable: %s\"}",
+                e.getMessage() != null ? e.getMessage().replace("\"", "\\\"") : "Unknown error");
+
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body("Service unavailable: " + e.getMessage());
+                .headers(errorHeaders)
+                .body(errorBody);
         }
     }
 }
